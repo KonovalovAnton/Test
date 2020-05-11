@@ -1,1 +1,4 @@
-test — копия.txt
+/TestFolder
+*.exe
+TestFormFirst/obj/
+*.pdb
