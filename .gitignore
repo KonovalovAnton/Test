@@ -2,3 +2,5 @@
 *.exe
 TestFormFirst/obj/
 *.pdb
+TestFormFirst/.vs/
+Model/Model/obj/

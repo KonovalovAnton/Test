@@ -15,7 +15,12 @@ namespace TestFormFirst
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Form1());
+
+
+            ModelProvider modelProvider = new ModelProvider();
+            ControllerProvider controllerProvider = new ControllerProvider(modelProvider);
+
+            Application.Run(new Form1(modelProvider, controllerProvider));
         }
     }
 }

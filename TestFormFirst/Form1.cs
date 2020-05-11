@@ -1,27 +1,47 @@
-﻿using System;
+﻿using Model;
+using System;
+using System.Collections.Generic;
 using System.Windows.Forms;
 
 namespace TestFormFirst
 {
     public partial class Form1 : Form
     {
-        Pet pet;
-        //System.Timers.Timer aTimer;
+        Model.Tamagochi pet;
+        Model.TamagochiController tamagochiController;
+
         System.Windows.Forms.Timer aTimer;
         System.Windows.Forms.Timer bTimer;        
         DateTime date1 = DateTime.Now;
 
-        public Form1()
+        Dictionary<ParameterType, ProgressBar> _progressBars;
+        Dictionary<ParameterType, Label> _labels;
+
+        public Form1(ModelProvider modelProvider, ControllerProvider controllerProvider)
         {
             InitializeComponent();
 
-            pet = new Pet();
-            UpdateParameters();
+            _progressBars = new Dictionary<ParameterType, ProgressBar>()
+            {
+                [ParameterType.Energy] = Energy,
+                [ParameterType.Hunger] = Hunger,
+                [ParameterType.Mood] = Mood,
+                [ParameterType.Walk] = Walk
+            };
 
-            //aTimer = new System.Timers.Timer(1000)
-            //aTimer.Elapsed += OnChangeParameters;
-            //aTimer.AutoReset = true;
-            //aTimer.Enabled = true;
+            _labels = new Dictionary<ParameterType, Label>()
+            {
+                [ParameterType.Energy] = labelEnergyStatus,
+                [ParameterType.Hunger] = labelHungerStatus,
+                [ParameterType.Mood] = labelMoodStatus,
+                [ParameterType.Walk] = labelWalkStatus
+            };
+
+            tamagochiController = controllerProvider.TamagochiController;
+            pet = modelProvider.Model.Pet;
+            SubscribeParameters();
+            pet.Init();
+
             aTimer = new System.Windows.Forms.Timer();
             aTimer.Tick += new EventHandler(OnChangeParameters);
             aTimer.Interval = 1000;
@@ -35,10 +55,26 @@ namespace TestFormFirst
             CheckData();
         }
 
+        private void SubscribeParameters()
+        {
+            pet.OnParamsChanged += OnParameterChange;
+        }
+
+        private void UnsubscribeParameters()
+        {
+            pet.OnParamsChanged -= OnParameterChange;
+        }
+
+        private void OnParameterChange(ParameterType arg1, int arg2, int arg3)
+        {
+            _progressBars[arg1].Value = arg3;
+            _labels[arg1].Text = arg3.ToString();
+        }
+
         private void CheckData()
         {
             labelEnergyPlus.Text = null;
-            var delta = PetStatusChanges.Delta[pet.Status]; //со словарем не совсем понятна работа
+            var delta = PetStatusChanges.Delta[pet.GetStatus()];
             
             foreach (var item in delta)
             {               
@@ -54,47 +90,14 @@ namespace TestFormFirst
             labelTimer.Text = "Прошло с начала игры: " + X.Subtract(date1).ToString(/*"HH:mm:ss"*/); //почему-то не может показывать в таком формате
         }
 
-        private void OnChangeParameters(object sender, EventArgs e) //у нас нет ни объекта входящего, ни аргумента, нахрена они указываются?
+        private void OnChangeParameters(object sender, EventArgs e)
         {
-           
-            var delta = PetStatusChanges.Delta[pet.Status]; //со словарем не совсем понятна работа
-
-            foreach (var item in delta)
-            {                
-                pet.Parameters[item.Key] += item.Value;                               
-                   
-                if (pet.Parameters[item.Key] < 0)
-                {
-                    pet.Parameters[item.Key] = 0;                   
-                }
-
-                if(pet.Parameters[item.Key] > 100)
-                {
-                    pet.Parameters[item.Key] = 100;                    
-                }
-
-               
-            }
-            UpdateParameters();
-        }
-
-        private void UpdateParameters()
-        {
-            Mood.Value = pet.Parameters[ParameterType.Mood];
-            Hunger.Value = pet.Parameters[ParameterType.Hunger];
-            Energy.Value = pet.Parameters[ParameterType.Energy];
-            Walk.Value = pet.Parameters[ParameterType.Walk];
-
-            labelEnergyStatus.Text = pet.Parameters[ParameterType.Energy].ToString();
-            labelHungerStatus.Text = pet.Parameters[ParameterType.Hunger].ToString();
-            labelMoodStatus.Text = pet.Parameters[ParameterType.Mood].ToString();
-            labelWalkStatus.Text = pet.Parameters[ParameterType.Walk].ToString();            
-        }
-               
+            tamagochiController.UpdateDelta();
+        }    
 
         private void ClickPlay(object sender, EventArgs e)
         {
-            pet.Status = Status.Playing;
+            pet.SetStatus(Status.Playing);
             labelStatus.Text = "Playing";
             pictureBox1.Image = Properties.Resources.playing;
             CheckData();
@@ -102,7 +105,7 @@ namespace TestFormFirst
 
         private void ClickSleep(object sender, EventArgs e)
         {
-            pet.Status = Status.Sleeping;
+            pet.SetStatus(Status.Sleeping);
             labelStatus.Text = "Sleeping";
             pictureBox1.Image = Properties.Resources.sleep;
             CheckData();
@@ -110,7 +113,7 @@ namespace TestFormFirst
 
         private void ClickEat(object sender, EventArgs e)
         {
-            pet.Status = Status.Eating;
+            pet.SetStatus(Status.Eating);
             labelStatus.Text = "Eating";
             pictureBox1.Image = Properties.Resources.eat;
             CheckData();
@@ -118,7 +121,7 @@ namespace TestFormFirst
 
         private void ClickWalk(object sender, EventArgs e)
         {
-            pet.Status = Status.Walking;
+            pet.SetStatus(Status.Walking);
             labelStatus.Text = "Walking";
             pictureBox1.Image = Properties.Resources.walking;
             CheckData();
@@ -126,7 +129,7 @@ namespace TestFormFirst
 
         private void ClickIdle(object sender, EventArgs e)
         {
-            pet.Status = Status.Idle;
+            pet.SetStatus(Status.Idle);
             labelStatus.Text = "Idle";
             pictureBox1.Image = Properties.Resources.nothing;
             CheckData();
